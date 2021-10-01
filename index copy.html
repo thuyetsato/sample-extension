@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="kda-extension.lib.js"></script>
+</head>
+<body onload="handleDocumentReady()">
+  <button id="callEx">Call Ex</button>
+  <button id="getAccount">Get account</button>
+  <form action="">
+    <textarea name="" id="" cols="30" rows="10"></textarea>
+  </form>
+  <script>
+    function handleDocumentReady() {
+      console.log('document ready! ', kadena)
+    }
+
+    let btnGetAccount = document.getElementById("getAccount")
+    btnGetAccount.addEventListener("click", () => {
+      btnGetAccount.innerText = 'getting...'
+      kadena.request({ method: 'get_account' }).then(response => {
+        console.log('response ', response)
+        textarea.value = response.data
+        btnGetAccount.innerText = 'Get account'
+      })
+    }, false);
+    
+    document.getElementById("callEx").addEventListener("click", () => {
+      window.postMessage({
+        target: 'kda.content',
+        action: 'open'
+      }, "*");
+    });
+    const textarea = document.querySelector('textarea');
+
+    if (kadena) {
+      kadena.on('transfer', (response) => {
+        console.log('Local: ', response)
+        alert(`you receive from ${response.data.address} with amount ${response.data.amount}`)
+      })
+    }
+
+    // let packageLoad = null
+    // if (packageLoad) {
+    //   clearInterval(packageLoad)
+    // } else {
+    //   packageLoad = setInterval(() => {
+        
+    //   }, 100);
+    // }
+  </script>
+</body>
+</html>
