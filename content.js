@@ -1,4 +1,4 @@
-console.log('Hello page, from extension', chrome);
+console.log('Hello page, from extension', localStorage);
 
 const scriptInjection = document.createElement('script');
 scriptInjection.src = chrome.extension.getURL('injected.js');
@@ -25,7 +25,7 @@ port.onMessage.addListener(async (data) => {
 
 // Listen webpage(dapps) message
 window.addEventListener('message', (event) => {
-  console.log('CONTENT window listener ',event.data)
+  console.log('CONTENT window listener ',event.data, event.source)
   if (event.source != window) return
 
   const data = event.data

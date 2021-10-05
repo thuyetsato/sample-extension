@@ -49,13 +49,23 @@ const showPopup = async (payload) => {
 
 chrome.runtime.onConnect.addListener(async (port) => {
   console.log('Runtime Listener ', port)
-  console.log('BACKGROUND listener ', payload)
   contentPort = port
-
+  
   port.onMessage.addListener(async (payload) => {
+    console.log('BACKGROUND listener ', payload)
     if (payload.action === 'open') {
       //TODO: handle payload
       showPopup(payload)
+    }
+    
+    if (payload.action === 'PUSH_NOTIFICATION') {
+      chrome.notifications.create('NOTFICATION_ID', {
+        type: 'basic',
+        iconUrl: 'noti.webp',
+        title: 'notification title',
+        message: 'notification message',
+        priority: 2
+    })
     }
   });
 });

@@ -20,9 +20,9 @@
     let btnGetAccount = document.getElementById("getAccount")
     btnGetAccount.addEventListener("click", () => {
       btnGetAccount.innerText = 'getting...'
-      kadena.request({ method: 'get_account' }).then(response => {
+      kadena.request({ method: 'kda_getAccount' }).then(response => {
         console.log('response ', response)
-        textarea.value = response.data
+        textarea.value = `Name: ${response.data.name}\nBalance: ${response.data.balance}`
         btnGetAccount.innerText = 'Get account'
       })
     }, false);
@@ -41,13 +41,17 @@
     } else {
       packageLoad = setInterval(() => {
         if (kadena) {
+          kadena.on('connect', (response) => {
+            console.log('Kadena extension connected: ', response);
+          });
+
           kadena.on('transfer', (response) => {
             console.log('Local: ', response)
             alert(`you receive from ${response.data.address} with amount ${response.data.amount}`)
           })
           clearInterval(packageLoad)
         }
-      }, 100);
+      }, 200);
     }
   </script>
 </body>

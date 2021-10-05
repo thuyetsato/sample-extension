@@ -6,43 +6,65 @@ document.addEventListener('onloadInject', (e) => {
     console.log('Detail extension URL: ', extensionURL)
 });
 
+/**
+ * Kadena instance
+ * 
+ * Methods:
+ * on: params(name: String, callback: Function)
+ * 
+ * request: params(options: Object)
+ */
 window.kadena = {
-    on: (name, callback) => {
-        window.addEventListener('message', (event) => {
-            console.log('INJECT received event: ', event.data)
-            if (!event.data) return;
+  on: (name, callback) => {
+    window.addEventListener('message', (event) => {
+      console.log('INJECT received event: ', event.data)
+      if (!event.data) return;
 
-            let target = event.data.target || ''
-            let listenName = event.data.action || ''
-            
-            if (listenName === name) {
-                switch (target) {
-                    case 'kda.dapps':
-                        callback(event.data)
-                        break;
-                
-                    default:
-                        console.log('failed!', target)
-                        break;
-                }
-            }
-        })
-    },
+      let target = event.data.target || ''
+      let action = event.data.action || ''
+      
+      if (action === name) {
+        switch (target) {
+          case 'connect':
+            callback('Your dapps connected with Kadena wallet success!')
+            break;
+          case 'disconnect':
+            callback('Your dapps connected with Kadena wallet success!')
+            break;
 
-    request: (options) => {
-        const method = options.method || ''
-
-        switch (method) {
-            case 'get_account':
-                return new Promise((res, rej) => {
-                    setTimeout(() => {
-                        res({data: 123456789})
-                    }, 2000);
-                })       
-                break;
-        
-            default:
-                break;
+          case 'kda.dapps':
+            callback(event.data)
+            break;
+          
+          default:
+            console.log('failed!', target)
+            break;
         }
+      }
+    })
+  },
+
+  request: async (options) => {
+    const method = options.method || ''
+
+    switch (method) {
+      case 'kda_getAccount':
+        let users = await fetch('https://reqres.in/api/users?page=2')
+        users = await users.json()
+
+        return new Promise((res, rej) => {
+          setTimeout(() => {
+            window.postMessage({
+                action: 'PUSH_NOTIFICATION',
+                target: 'kda.content'
+            })
+
+            res({data: { name: 'aaaa', balance: 1234 }, users})
+          }, 2000);
+        })
+  
+      default:
+          break;
     }
+  }
 }
