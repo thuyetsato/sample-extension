@@ -65,7 +65,20 @@ chrome.runtime.onConnect.addListener(async (port) => {
         title: 'notification title',
         message: 'notification message',
         priority: 2
-    })
+      })
+    }
+
+    if (payload.action === 'kda_requestAccounts') {
+      setTimeout(async () => {
+        let users = await fetch('https://reqres.in/api/users?page=2')
+      users = await users.json()
+
+      port.postMessage({
+        users,
+        target: 'kda.content',
+        action: 'res_requestAccount'
+      });
+      }, 1500);
     }
   });
 });
