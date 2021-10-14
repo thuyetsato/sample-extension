@@ -1,56 +1,30 @@
-console.log(chrome)
-let address = document.getElementById('address')
-let amount = document.getElementById('amount')
-let btnSend = document.getElementById('btnSend')
-let btnAccept = document.getElementById('btnAccept')
+let accounts = []
+let currentAccount
 
+const listAccountDOM = document.getElementById('listAccount')
 
-let sectionAbc = document.getElementById('sectionAbc')
-let sectionConnect = document.getElementById('sectionConnect')
+chrome.storage.local.get('accounts', (store) => {
+  accounts = store.accounts || []
 
-//TODO: allow DOM appear with condition
-sectionAbc.style.display = 'none'
+  let listAccount = ''
+  accounts.forEach(account => {
+    listAccount += `<li>${account.email} <button data-id="${account.id}" class="switchBtn">Switch</button></li>`
+  })
 
-
-let dappURL
-chrome.storage.local.get('transactions', (store) => {
-  if (!store.transactions) return
-
-  let connectTrans = store.transactions.filter(trans => trans.name === 'connect')
-  if (connectTrans.length) {
-    let dappName = document.getElementById('dappName')
-    dappName.innerText = connectTrans[0].dappURL
-    dappURL = connectTrans[0].dappURL
-  }
-})
-
-btnAccept.addEventListener('click', () => {
-  chrome.runtime.sendMessage({
-    target: "kda.background",
-    action: "connect",
-    data: { dappURL }
-  });
-
-  closeCurrentWindow()
-})
-
-btnSend.addEventListener('click', () => {
-  setTimeout(() => {
-    chrome.runtime.sendMessage({
-      target: "kda.background",
-      action: "transfer",
-      data: {
-        address: address.value,
-        amount: amount.value
+  listAccountDOM.innerHTML = listAccount
+  document.querySelectorAll('.switchBtn').forEach(item => {
+    item.addEventListener('click', event => {
+      
+      let accountSelected = accounts.filter(acc => acc.id == event.target.dataset.id)
+      if (accountSelected.length) {
+        chrome.storage.local.set({accountSelected: accountSelected[0]}, () => {
+          chrome.runtime.sendMessage({
+            account: accountSelected[0],
+            target: 'kda.background',
+            action: 'kda_switchAccount'
+          });
+        });
       }
-    });
-
-    closeCurrentWindow()
-  }, 2000);
+    })
+  })
 })
-
-function closeCurrentWindow() {
-  return chrome.windows.getCurrent((windowDetails) => {
-    return chrome.windows.remove(windowDetails.id);
-  });
-}

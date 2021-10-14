@@ -17,6 +17,10 @@ class Listener {
     return new Promise((res, rej) => {
       window.addEventListener('message', (event) => {
         if (event.data.action === responseName) {
+          if (this.handler) {
+            this.handler(event.data)
+          }
+
           if (event.data.error) {
             return rej(event.data.error)
           }
@@ -39,36 +43,9 @@ class Listener {
 window.kadena = {
   isKadena: true,
 
-  on: (name, callback) => {
-    let listener = new Listener(name)
-    listener.on(name, callback)
-
-    // window.addEventListener('message', (event) => {
-    //   console.log('INJECT received event: ', event.data)
-    //   if (!event.data) return;
-
-    //   let target = event.data.target || ''
-    //   let action = event.data.action || ''
-      
-    //   if (action === name) {
-    //     switch (target) {
-    //       case 'connect':
-    //         callback('Your dapps connected with Kadena wallet success!')
-    //         break;
-    //       case 'disconnect':
-    //         callback('Your dapps connected with Kadena wallet success!')
-    //         break;
-
-    //       case 'kda.dapps':
-    //         callback(event.data)
-    //         break;
-
-    //       default:
-    //         console.log('failed!', target)
-    //         break;
-    //     }
-    //   }
-    // })
+  on: async (name, callback) => {
+    let listener = new Listener(name, callback)
+    return await listener.on(name)
   },
 
   request: async (options) => {
@@ -92,6 +69,9 @@ window.kadena = {
 
       case 'kda_getWallet':
         return getWallet()
+
+      case 'kda_sendKadena':
+        return sendKadena(options.data)
 
       default:
           break;
@@ -126,23 +106,14 @@ const disconnect = async (options) => {
 }
 
 const getAccountSelected = async () => {
-  let handler = (data) => {
-    return data
-  }
-
-  let listener = new Listener('kda_requestAccounts', handler)
+   let listener = new Listener('kda_requestAccounts')
   listener.send({
     target: 'kda.content',
     action: listener.name,
     data: {}
   })
 
-  let account = await listener.on('res_requestAccount')
-
-  listener.send({
-    action: 'PUSH_NOTIFICATION',
-    target: 'kda.content'
-  })
+  let { account } = await listener.on('res_requestAccount')
 
   return account
 }
@@ -160,11 +131,6 @@ const getAccounts = async () => {
   })
 
   let data = await listener.on('res_accounts')
-
-  // listener.send({
-  //   action: 'PUSH_NOTIFICATION',
-  //   target: 'kda.content'
-  // })
 
   return data.accounts
 }
@@ -195,6 +161,29 @@ const getWallet = async () => {
   })
 
   let data = await listener.on('res_walletInfo')
+  let { id, email } = data.wallet
 
-  return data.block
+  return { id, email }
+}
+
+const sendKadena = async (params) => {
+  let handler = (data) => {
+    listener.send({
+      action: 'PUSH_NOTIFICATION',
+      target: 'kda.content',
+      title: 'Kadena notification',
+      message: 'Send transaction successfully!'
+    })
+  }
+
+  let listener = new Listener('kda_sendKadena', handler)
+  listener.send({
+    target: 'kda.content',
+    action: listener.name,
+    data: params
+  })
+
+  let { data } = await listener.on('res_sendKadena')
+
+  return data
 }
