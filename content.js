@@ -1,5 +1,3 @@
-console.log('Hello page, from extension', localStorage);
-
 const scriptInjection = document.createElement('script');
 scriptInjection.src = chrome.extension.getURL('injected.js');
 (document.head || document.documentElement).appendChild(scriptInjection);
@@ -16,7 +14,7 @@ const port = chrome.runtime.connect({name: 'kda.extension'})
 
 // Listen background message
 port.onMessage.addListener(async (data) => {
-  console.log('CONTENT background listener: ', data)
+  console.log('[Debug] CONTENT background listener: ', data)
   window.postMessage({
     ...data,
     target: 'kda.dapps'
@@ -25,12 +23,11 @@ port.onMessage.addListener(async (data) => {
 
 // Listen webpage(dapps) message
 window.addEventListener('message', (event) => {
-  console.log('CONTENT window listener ',event.data, event.source)
+  console.log('[Debug] CONTENT window listener ', event.data)
   if (event.source != window) return
 
   const data = event.data
   if (data.target && data.target === 'kda.content') {
-    console.log('=======================================================')
     port.postMessage({
       ...data,
       target: 'kda.background'
