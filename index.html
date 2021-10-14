@@ -5,50 +5,186 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 </head>
-<body onload="handleDocumentReady()">
-  <button id="callEx">Call Ex</button>
-  <button id="getAccount">Get account</button>
-  <form action="">
-    <textarea name="" id="" cols="30" rows="10"></textarea>
-  </form>
+<body style="background-color: #10112c2a;">
+  <div class="container pt-5">
+    <button class="btn btn-primary" id="getAccount">Get account</button>
+    <button class="btn btn-primary" id="connectButton">Connect</button>
+    <button class="btn btn-warning" id="disconnectButton">Disconnect</button>
+
+    <div>
+      Account: <span id="getAccountResult"></span>
+    </div>
+    <textarea style="display: none" id="accountsResult" cols="50" rows="5"></textarea>
+  </div>
+
+  <div class="container pt-5">
+    <button class="btn btn-primary" id="getBlockInfo">Get blockchain info</button>
+    <button class="btn btn-primary" id="getWallet">Get wallet info</button>
+
+    <div>
+      <p>Blockchain info:</p>
+      <textarea id="getBlockchainResults" cols="50" rows="5"></textarea>
+    </div>
+    <div>
+      <p>Wallet info:</p>
+      <textarea id="getWalletResults" cols="50" rows="5"></textarea>
+    </div>
+  </div>
+
   <script>
-    function handleDocumentReady() {
-      console.log('document ready! ', kadena)
-    }
+    const onboardButton = document.getElementById('connectButton');
+    const disconnectButton = document.getElementById('disconnectButton');
+    const getAccountsButton = document.getElementById("getAccount");
+    const getAccountResult = document.getElementById("getAccountResult");
+    const accountsResult = document.getElementById("accountsResult");
 
-    let btnGetAccount = document.getElementById("getAccount")
-    btnGetAccount.addEventListener("click", () => {
-      btnGetAccount.innerText = 'getting...'
-      kadena.request({ method: 'get_account' }).then(response => {
-        console.log('response ', response)
-        textarea.value = response.data
-        btnGetAccount.innerText = 'Get account'
-      })
-    }, false);
-    
-    document.getElementById("callEx").addEventListener("click", () => {
-      window.postMessage({
-        target: 'kda.content',
-        action: 'open'
-      }, "*");
-    });
-    const textarea = document.querySelector('textarea');
+    const getBlockInfoButton = document.getElementById("getBlockInfo");
+    const getWalletButton = document.getElementById("getWallet");
+    const getBlockchainResults = document.getElementById("getBlockchainResults");
+    const getWalletResults = document.getElementById("getWalletResults");
 
-    let packageLoad = null
-    if (packageLoad) {
-      clearInterval(packageLoad)
-    } else {
-      packageLoad = setInterval(() => {
-        if (kadena) {
-          kadena.on('transfer', (response) => {
-            console.log('Local: ', response)
-            alert(`you receive from ${response.data.address} with amount ${response.data.amount}`)
-          })
-          clearInterval(packageLoad)
+    /**
+     * Check kadena installed
+     */
+      const isKadenaInstalled = () => {
+      const { kadena } = window;
+
+      return Boolean(kadena && kadena.isKadena);
+    };
+
+    const initialize = async () => {
+      let accounts
+
+      const initAppActionButton = () => {
+        getAccountsButton.onclick = async () => {
+          try {
+            accounts = await kadena.request({
+              method: 'kda_accounts',
+            })
+
+            if (accounts.length) {
+              getAccountResult.innerHTML = accounts[0].email
+              accountsResult.value = JSON.stringify(accounts)
+              accountsResult.style.display = 'block'
+            } else {
+              getAccountResult.innerHTML = 'Not able to get accounts'
+            }
+          } catch (err) {
+            console.error(err)
+            getAccountResult.innerHTML = `Error: ${err.message}`
+            accountsResult.style.display = 'none'
+          }
         }
-      }, 100);
-    }
+
+        getBlockInfoButton.onclick = async () => {
+          console.log('123455555');
+          try {
+            let blockInfo = await kadena.request({
+              method: 'kda_getBlockInfo',
+            })
+
+            console.log('blockInfo ', blockInfo);
+
+            getBlockchainResults.value = JSON.stringify(blockInfo)
+          } catch (err) {
+            console.error(err)
+            getBlockchainResults.value = ''
+          }
+        }
+
+        getWalletButton.onclick = async () => {
+          try {
+            let wallet = await kadena.request({
+              method: 'kda_getWallet',
+            })
+
+            getWalletResults.value = JSON.stringify(wallet)
+          } catch (err) {
+            console.error(err)
+            getWalletResults.value = ''
+          }
+        }
+      }
+
+      /**
+       * 
+       */
+      const onClickConnect = async () => {
+        try {
+          accounts = await kadena.request({ method: 'kda_connect' });
+          getAccountResult.innerHTML = accounts.length ? accounts[0].email : ''
+
+          KadenaClientCheck();
+        } catch (error) {
+          console.error(error);
+        }
+      };
+
+      const onClickDisconnect = async () => {
+        // TODO: remove some event listener on extension
+        kadena.request({
+          method: 'kda_disconnect',
+          data: {
+            account: accounts[0]
+          }
+        });
+
+        accounts = null
+        getAccountResult.innerHTML = ''
+        KadenaClientCheck();
+      }
+
+      const isKadenaConnected = () => accounts && accounts.length > 0
+
+      const KadenaClientCheck = () => {
+        if (!isKadenaInstalled()) {
+          onboardButton.innerText = 'Click here to install Kadena!';
+          accountsResult.style.display = 'none'
+        } else if (isKadenaConnected()) {
+          onboardButton.innerText = 'Connect';
+          onboardButton.disabled = true;
+
+          disconnectButton.disabled = false;
+          disconnectButton.onclick = onClickDisconnect;
+
+          initAppActionButton()
+        } else {
+          onboardButton.innerText = 'Connect';
+          onboardButton.onclick = onClickConnect;
+          onboardButton.disabled = false;
+          disconnectButton.disabled = true;
+          accountsResult.style.display = 'none'
+        }
+      };
+
+      KadenaClientCheck();
+
+      if (isKadenaInstalled()) {
+        // kadena.on('accountsChanged', handleNewAccounts)
+
+        try {
+          const newAccounts = await kadena.request({
+            method: 'kda_accounts',
+          })
+
+          accounts = newAccounts
+          getAccountResult.innerHTML = accounts.length ? accounts[0].email : ''
+
+          KadenaClientCheck();
+        } catch (err) {
+          console.error('Error on init when getting accounts', err)
+        }
+        }
+
+      // kadena.on('transfer', (response) => {
+      //   console.log('Local: ', response)
+      //   alert(`you receive from ${response.data.address} with amount ${response.data.amount}`)
+      // })
+    };
+
+    window.addEventListener('load', initialize);
   </script>
 </body>
 </html>
