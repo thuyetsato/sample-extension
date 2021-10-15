@@ -2,18 +2,23 @@
 <html lang="en">
 <head>
   <style>
-    body {
-      width: 350px;
-      height: 250px;
-    }
-    h1 {
-      color: rgb(49, 165, 55);
-    }
+    body { width: 350px; height: 250px; }
+    h1 { color: rgb(49, 165, 55); }
+    ul { list-style: none; padding: 0; font-size: 14px; }
   </style>
 </head>
 <body>
-  <h1>My first extension!</h1>
-  <button id="">Click</button>
+  <h1>Kadena extension!</h1>
+  <h3>Accounts: </h3>
+  <div>
+    <ul id="listAccount"></ul>
+  </div>
+
+  <h3>Transactions: </h3>
+  <div>
+    <ul id="listTransaction"></ul>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

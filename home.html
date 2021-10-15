@@ -6,9 +6,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="script-src * 'unsafe-inline' 'unsafe-eval';">
   <title>Kadena Extension</title>
+  <style>
+    .loader {
+      border: 2px solid #3498db;
+      border-radius: 50%;
+      border-top: 2px solid #f3f3f3;
+      width: 10px;
+      height: 10px;
+      -webkit-animation: spin 2s linear infinite; /* Safari */
+      animation: spin 2s linear infinite;
+      margin-left: 2px;
+    }
+    
+    /* Safari */
+    @-webkit-keyframes spin {
+      0% { -webkit-transform: rotate(0deg); }
+      100% { -webkit-transform: rotate(360deg); }
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    </style>
 </head>
 <body>
-  <div id="sectionAbc">
+  <div id="signTransaction">
     <div class="">
       Address <input type="text" id="address" placeholder="Enter address">
     </div>
@@ -17,7 +40,12 @@
       Amount <input type="text" id="amount" placeholder="Enter amount">
     </div>
     <br>
-    <button id="btnSend">Send</button>
+    <div>
+      <button id="btnSend">Send</button>
+    </div>
+    <div id="loader" style="display: none; align-items: center;">
+      Sending <div class="loader"></div>
+    </div>
   </div>
 
   <div id="sectionConnect">
@@ -28,6 +56,6 @@
 
     <button id="btnAccept">Accept</button>
   </div>
-  <script src="popup.js"></script>
+  <script src="home.js"></script>
 </body>
 </html>

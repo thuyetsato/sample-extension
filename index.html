@@ -25,11 +25,20 @@
 
     <div>
       <p>Blockchain info:</p>
-      <textarea id="getBlockchainResults" cols="50" rows="5"></textarea>
+      <textarea id="getBlockchainResults" cols="50" rows="3"></textarea>
     </div>
     <div>
       <p>Wallet info:</p>
-      <textarea id="getWalletResults" cols="50" rows="5"></textarea>
+      <textarea id="getWalletResults" cols="50" rows="3"></textarea>
+    </div>
+  </div>
+
+  <div class="container pt-5">
+    <button class="btn btn-primary" id="sendKadenaButton">Send kadena</button>
+    <button class="btn btn-primary" id="reSendKadenaButton">Send kadena (fail)</button>
+    <div>
+      <p>Result: </p>
+      <textarea id="sendKadenaResults" cols="50" rows="3"></textarea>
     </div>
   </div>
 
@@ -45,6 +54,10 @@
     const getBlockchainResults = document.getElementById("getBlockchainResults");
     const getWalletResults = document.getElementById("getWalletResults");
 
+    const sendKadenaButton = document.getElementById("sendKadenaButton");
+    const reSendKadenaButton = document.getElementById("reSendKadenaButton");
+    const sendKadenaResults = document.getElementById("sendKadenaResults");
+
     /**
      * Check kadena installed
      */
@@ -55,7 +68,8 @@
     };
 
     const initialize = async () => {
-      let accounts
+      let accounts = []
+      let accountSelected
 
       const initAppActionButton = () => {
         getAccountsButton.onclick = async () => {
@@ -79,13 +93,10 @@
         }
 
         getBlockInfoButton.onclick = async () => {
-          console.log('123455555');
           try {
             let blockInfo = await kadena.request({
               method: 'kda_getBlockInfo',
             })
-
-            console.log('blockInfo ', blockInfo);
 
             getBlockchainResults.value = JSON.stringify(blockInfo)
           } catch (err) {
@@ -106,6 +117,40 @@
             getWalletResults.value = ''
           }
         }
+
+        sendKadenaButton.onclick = async () => {
+          try {
+            let result = await kadena.request({
+              method: 'kda_sendKadena',
+              data: {
+                to: 'someone@mail.com',
+                amount: 123456
+              }
+            })
+
+            sendKadenaResults.value = JSON.stringify(result)
+          } catch (err) {
+            console.error(err)
+            sendKadenaResults.value = ''
+          }
+        }
+
+        reSendKadenaButton.onclick = async () => {
+          try {
+            let result = await kadena.request({
+              method: 'kda_sendKadenaFail',
+              data: {
+                to: 'someone_fail@mail.com',
+                amount: 123456
+              }
+            })
+
+            sendKadenaResults.value = JSON.stringify(result)
+          } catch (err) {
+            console.error(err)
+            sendKadenaResults.value = ''
+          }
+        }
       }
 
       /**
@@ -113,8 +158,17 @@
        */
       const onClickConnect = async () => {
         try {
-          accounts = await kadena.request({ method: 'kda_connect' });
-          getAccountResult.innerHTML = accounts.length ? accounts[0].email : ''
+          await kadena.request({ method: 'kda_connect' });
+          accountSelected = await kadena.request({
+            method: 'kda_requestAccounts',
+          })
+
+          if (accountSelected) {
+            console.log('accounts ',accounts)
+            accounts.push(accountSelected)
+          }
+
+          getAccountResult.innerHTML = accountSelected ? accountSelected.email : ''
 
           KadenaClientCheck();
         } catch (error) {
@@ -131,8 +185,15 @@
           }
         });
 
-        accounts = null
+        accounts = []
+
         getAccountResult.innerHTML = ''
+        getAccountResult.innerHTML = ''
+        accountsResult.style.display = 'none'
+        getBlockchainResults.value = ''
+        getWalletResults.value = ''
+        sendKadenaResults.value = ''
+
         KadenaClientCheck();
       }
 
@@ -162,15 +223,17 @@
       KadenaClientCheck();
 
       if (isKadenaInstalled()) {
-        // kadena.on('accountsChanged', handleNewAccounts)
-
         try {
-          const newAccounts = await kadena.request({
-            method: 'kda_accounts',
+          accountSelected = await kadena.request({
+            method: 'kda_requestAccounts',
           })
 
-          accounts = newAccounts
-          getAccountResult.innerHTML = accounts.length ? accounts[0].email : ''
+          if (accountSelected) {
+            accounts.push(accountSelected)
+          }
+
+
+          getAccountResult.innerHTML = accountSelected ? accountSelected.email : ''
 
           KadenaClientCheck();
         } catch (err) {
@@ -178,10 +241,14 @@
         }
         }
 
-      // kadena.on('transfer', (response) => {
-      //   console.log('Local: ', response)
-      //   alert(`you receive from ${response.data.address} with amount ${response.data.amount}`)
-      // })
+      kadena.on('kda_switchAccount', (response) => {
+        accountSelected = response.account
+        getAccountResult.innerHTML = accountSelected ? accountSelected.email : ''
+      })
+
+      kadena.on('kda_reSendTransaction', (response) => {
+        console.log('response ', response)
+      })
     };
 
     window.addEventListener('load', initialize);
