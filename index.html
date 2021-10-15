@@ -35,7 +35,7 @@
 
   <div class="container pt-5">
     <button class="btn btn-primary" id="sendKadenaButton">Send kadena</button>
-    <button class="btn btn-primary" id="reSendKadena">Send kadena (fail)</button>
+    <button class="btn btn-primary" id="reSendKadenaButton">Send kadena (fail)</button>
     <div>
       <p>Result: </p>
       <textarea id="sendKadenaResults" cols="50" rows="3"></textarea>
@@ -55,7 +55,7 @@
     const getWalletResults = document.getElementById("getWalletResults");
 
     const sendKadenaButton = document.getElementById("sendKadenaButton");
-    const reSendKadena = document.getElementById("reSendKadena");
+    const reSendKadenaButton = document.getElementById("reSendKadenaButton");
     const sendKadenaResults = document.getElementById("sendKadenaResults");
 
     /**
@@ -124,6 +124,23 @@
               method: 'kda_sendKadena',
               data: {
                 to: 'someone@mail.com',
+                amount: 123456
+              }
+            })
+
+            sendKadenaResults.value = JSON.stringify(result)
+          } catch (err) {
+            console.error(err)
+            sendKadenaResults.value = ''
+          }
+        }
+
+        reSendKadenaButton.onclick = async () => {
+          try {
+            let result = await kadena.request({
+              method: 'kda_sendKadenaFail',
+              data: {
+                to: 'someone_fail@mail.com',
                 amount: 123456
               }
             })
@@ -227,6 +244,10 @@
       kadena.on('kda_switchAccount', (response) => {
         accountSelected = response.account
         getAccountResult.innerHTML = accountSelected ? accountSelected.email : ''
+      })
+
+      kadena.on('kda_reSendTransaction', (response) => {
+        console.log('response ', response)
       })
     };
 

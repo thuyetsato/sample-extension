@@ -14,7 +14,7 @@ class Listener {
   }
 
   on(responseName) {
-    return new Promise((res, rej) => {
+    return new Promise((resolve, reject) => {
       window.addEventListener('message', (event) => {
         if (event.data.action === responseName) {
           if (this.handler) {
@@ -22,10 +22,10 @@ class Listener {
           }
 
           if (event.data.error) {
-            return rej(event.data.error)
+            return reject(event.data.error)
           }
 
-          return res(event.data)
+          return resolve(event.data)
         }
       })
     })
@@ -72,6 +72,9 @@ window.kadena = {
 
       case 'kda_sendKadena':
         return sendKadena(options.data)
+
+      case 'kda_sendKadenaFail':
+        return sendKadenaFail(options.data)
 
       default:
           break;
@@ -186,4 +189,26 @@ const sendKadena = async (params) => {
   let { data } = await listener.on('res_sendKadena')
 
   return data
+}
+
+const sendKadenaFail = async (params) => {
+  let handler = (data) => {
+    listener.send({
+      action: 'PUSH_NOTIFICATION',
+      target: 'kda.content',
+      title: 'Kadena notification',
+      message: 'Send transaction failed!'
+    })
+  }
+
+  let listener = new Listener('kda_sendKadenaFail', handler)
+  listener.send({
+    target: 'kda.content',
+    action: listener.name,
+    data: params
+  })
+
+  let data = await listener.on('res_sendKadenaFail')
+
+  return data.transaction
 }

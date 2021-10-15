@@ -5,7 +5,7 @@ const TX_PENDING = 'pending'
 let contentPort = null
 let connectedSites = localStorage.getItem('connectedSites')
 connectedSites = connectedSites ? JSON.parse(connectedSites) : []
-const API_ENDPOINT = 'https://reqres.in/api/users'
+const API_ENDPOINT = 'https://reqres.in/api'
 
 /**
  * One-time connection
@@ -22,6 +22,10 @@ chrome.runtime.onMessage.addListener(
         localStorage.setItem('connectedSites', JSON.stringify(connectedSites))
 
         return getAccounts(contentPort)
+      }
+
+      if (request.action === 'kda_reSendKadena') {
+        return reSendKadena(contentPort, request)
       }
 
       try {
@@ -49,6 +53,10 @@ chrome.runtime.onConnect.addListener(async (port) => {
 
     const action = payload.action || ''
 
+    if (action !== 'open' && !connectedSites.includes(port.sender.origin)) {
+      return
+    }
+
     switch (action) {
       case 'open': 
         //TODO: handle payload
@@ -57,7 +65,7 @@ chrome.runtime.onConnect.addListener(async (port) => {
         break;
 
       case 'kda_disconnect': 
-        connectedSites = []
+        connectedSites = [] // Change logic to remove site out of list
         localStorage.setItem('connectedSites', [])
         chrome.storage.local.set({accountSelected: null}, () => {});
         break;
@@ -83,6 +91,14 @@ chrome.runtime.onConnect.addListener(async (port) => {
         sendKadena(port, payload)
         break;
 
+      case 'kda_sendKadenaFail': 
+        sendKadenaFail(port, payload)
+        break;
+
+      case 'kda_reSendKadena': 
+        reSendKadena(port, payload)
+        break;
+
       case 'PUSH_NOTIFICATION': 
         pushNotification(payload)
         break;
@@ -99,16 +115,6 @@ chrome.runtime.onConnect.addListener(async (port) => {
  * @param {Object} port 
  */
 const getAccountSelected = async (port) => {
-  if (!connectedSites.includes(port.sender.origin)) {
-    port.postMessage({
-      account: null,
-      target: 'kda.content',
-      action: 'res_requestAccount'
-    });
-
-    return
-  }
-
   let account = null
 
   new Promise((res, rej) => {
@@ -124,7 +130,7 @@ const getAccountSelected = async (port) => {
   }).then(async account => {
       if (!account) {
         // TODO: change to real pact-lang api request
-        user = await fetch(`${API_ENDPOINT}/1`)
+        user = await fetch(`${API_ENDPOINT}/users/1`)
         user = await user.json()
 
         chrome.storage.local.set({accountSelected: user.data}, () => {
@@ -181,7 +187,7 @@ const getAccounts = async (port) => {
 
       if (!accounts) {
         // TODO: change to real pact-lang api request
-        users = await fetch(API_ENDPOINT)
+        users = await fetch(`${API_ENDPOINT}/users`)
         users = await users.json()
 
         chrome.storage.local.set({accounts: users.data}, () => {
@@ -211,7 +217,7 @@ const getAccounts = async (port) => {
  * @param {Object} payload 
  */
 const getBlockInfo = async (port, payload) => {
-  let block = await fetch(API_ENDPOINT)
+  let block = await fetch(`${API_ENDPOINT}/users`)
   block = await block.json()
 
   contentPort = port || contentPort
@@ -231,7 +237,7 @@ const getBlockInfo = async (port, payload) => {
  * @param {Object} payload 
  */
 const getWalletInfo = async (port, payload) => {
-  let wallet = await fetch(`${API_ENDPOINT}/2`)
+  let wallet = await fetch(`${API_ENDPOINT}/users/2`)
   wallet = await wallet.json()
 
   contentPort = port || contentPort
@@ -258,6 +264,78 @@ const sendKadena = async (port, payload) => {
   //   target: 'kda.content',
   //   action: 'res_sendKadena'
   // });
+}
+
+const sendKadenaFail = async (port, payload) => {
+  contentPort = port || contentPort
+
+  //TODO: handle show popup send transaction
+  // showPopup(payload)
+
+  let transactions = await getTransactions()
+  let failTxId = new Date().getTime()
+  transactions.push({
+    id: failTxId,
+    status: TX_PENDING,
+    name: payload.name || 'kda_sendKadenaFail',
+    data: payload.data,
+  })
+
+  chrome.storage.local.set({ transactions }, updateBadge)
+
+  try {
+    // TODO: implement send transaction with pact-lang api
+    let result = await fetch(`${API_ENDPOINT}/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: ``
+    })
+    result = await result.json()
+
+    transactions = transactions.map(tx => {
+      if (tx.id === failTxId) {
+        tx.status = TX_FAILED
+      }
+
+      return tx
+    })
+
+    chrome.storage.local.set({ transactions }, updateBadge)
+
+    contentPort.postMessage({
+      transaction: { error: result.error },
+      target: 'kda.content',
+      action: 'res_sendKadenaFail'
+    }); 
+  } catch (error) {
+    console.log('error ', error)
+  }
+}
+
+const reSendKadena = async (port, payload) => {
+  contentPort = port || contentPort
+
+  chrome.storage.local.get(['transactions'], (storage) => {
+    let transactions = storage.transactions || []
+
+    if (chrome.runtime.lastError) return
+
+    //TODO: handle re-send transaction, remove fail item
+    transactions = transactions.filter(tx => tx.id !== payload.data.id)
+
+    chrome.storage.local.set({ transactions }, () => {
+      updateBadge()
+      pushNotification()
+
+      contentPort.postMessage({
+        data: payload.data,
+        target: 'kda.popup',
+        action: 'kda_reSendTransaction'
+      });
+    })
+  });  
 }
 
 /**
@@ -325,7 +403,7 @@ const showPopup = async (payload = {}) => {
  * @return {Number}
  */
 const countTransactions = async () => {
-  let transactions = await getTransactions(TX_PENDING)
+  let transactions = await getTransactions()
 
   return transactions.length 
 }

@@ -83,7 +83,7 @@ btnSend.addEventListener('click', () => {
         closeCurrentWindow()
       });
     })
-  }, 1500);
+  }, 1000);
 })
 
 function closeCurrentWindow() {
